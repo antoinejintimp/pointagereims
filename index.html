@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pointeuse — Reims Habitat</title>
+<style>
+:root{
+  --green:#B7D500;
+  --green-dark:#8FA800;
+  --navy:#20283A;
+  --muted:#69707A;
+  --soft:#F4F5F0;
+  --line:#E3E5DF;
+  --white:#FFFFFF;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:transparent;font-family:Arial,Helvetica,sans-serif;color:var(--navy)}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+.card{
+  background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;
+  box-shadow:0 10px 28px rgba(32,40,58,.08)
+}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:700;color:var(--green-dark)}
+h1{font-size:26px;line-height:1.15;margin:5px 0 4px}
+.sub{font-size:13px;color:var(--muted)}
+.status{
+  padding:8px 12px;border-radius:999px;background:var(--soft);font-size:12px;font-weight:700;
+  white-space:nowrap
+}
+.status.active{background:#eef5b8;color:#5f7100}
+.clock{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px
+}
+.timebox,.actionbox{
+  border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--soft)
+}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700}
+.time{font-size:42px;font-weight:800;letter-spacing:-.04em;margin-top:8px}
+.date{font-size:13px;color:var(--muted);margin-top:4px}
+.actionbox{display:flex;flex-direction:column;justify-content:center}
+.btn{
+  border:0;border-radius:12px;padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;
+  transition:.15s ease;background:var(--green);color:#253000
+}
+.btn:hover{transform:translateY(-1px);filter:brightness(.98)}
+.btn.out{background:var(--navy);color:white}
+.hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.4}
+.summary{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px
+}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fff}
+.kpi strong{display:block;font-size:20px;margin-top:7px}
+.history{margin-top:18px}
+.history h2{font-size:15px;margin:0 0 10px}
+.row{
+  display:grid;grid-template-columns:1fr auto;gap:12px;padding:11px 0;border-top:1px solid var(--line);font-size:13px
+}
+.row:first-of-type{border-top:0}
+.tag{font-size:11px;font-weight:700;padding:5px 8px;border-radius:999px;background:var(--soft)}
+.tag.in{background:#eef5b8;color:#5f7100}
+.empty{font-size:12px;color:var(--muted);padding:6px 0 2px}
+.demo{font-size:10px;color:#8b9095;margin-top:14px;text-align:right}
+@media(max-width:620px){
+  .clock{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr}
+  .top{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="top">
+      <div>
+        <div class="eyebrow">Reims Habitat</div>
+        <h1>Ma pointeuse</h1>
+        <div class="sub">Enregistrez votre arrivée et votre départ.</div>
+      </div>
+      <div id="status" class="status">Non pointé</div>
+    </div>
+
+    <div class="clock">
+      <div class="timebox">
+        <div class="label">Heure actuelle</div>
+        <div id="time" class="time">--:--</div>
+        <div id="date" class="date"></div>
+      </div>
+
+      <div class="actionbox">
+        <button id="punchBtn" class="btn">Pointer mon arrivée</button>
+        <div id="hint" class="hint">Votre pointage sera enregistré localement pour cette démonstration.</div>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div class="kpi"><div class="label">Arrivée</div><strong id="arrival">—</strong></div>
+      <div class="kpi"><div class="label">Départ</div><strong id="departure">—</strong></div>
+      <div class="kpi"><div class="label">Temps écoulé</div><strong id="elapsed">00h00</strong></div>
+    </div>
+
+    <div class="history">
+      <h2>Historique du jour</h2>
+      <div id="history"></div>
+    </div>
+
+    <div class="demo">Simulation de démonstration — aucune donnée RH réelle n'est enregistrée.</div>
+  </div>
+</div>
+
+<script>
+const KEY = "reims-habitat-pointeuse-demo-v1";
+const state = JSON.parse(localStorage.getItem(KEY) || '{"events":[]}');
+
+const timeEl = document.getElementById("time");
+const dateEl = document.getElementById("date");
+const statusEl = document.getElementById("status");
+const btn = document.getElementById("punchBtn");
+const arrivalEl = document.getElementById("arrival");
+const departureEl = document.getElementById("departure");
+const elapsedEl = document.getElementById("elapsed");
+const historyEl = document.getElementById("history");
+
+function pad(n){ return String(n).padStart(2,"0"); }
+function formatTime(d){ return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+
+function tick(){
+  const now = new Date();
+  timeEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  dateEl.textContent = now.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  updateElapsed();
+}
+setInterval(tick,1000); tick();
+
+function getTodayEvents(){
+  const today = new Date().toDateString();
+  return state.events.filter(e => new Date(e.ts).toDateString() === today);
+}
+
+function isIn(){
+  const ev = getTodayEvents();
+  return ev.length && ev[ev.length-1].type === "in";
+}
+
+function save(){
+  localStorage.setItem(KEY, JSON.stringify(state));
+  render();
+}
+
+function render(){
+  const ev = getTodayEvents();
+  const inside = isIn();
+
+  statusEl.textContent = inside ? "Présent" : "Non pointé";
+  statusEl.classList.toggle("active", inside);
+  btn.textContent = inside ? "Pointer mon départ" : "Pointer mon arrivée";
+  btn.classList.toggle("out", inside);
+
+  const firstIn = ev.find(e => e.type === "in");
+  const lastOut = [...ev].reverse().find(e => e.type === "out");
+  arrivalEl.textContent = firstIn ? formatTime(new Date(firstIn.ts)) : "—";
+  departureEl.textContent = lastOut ? formatTime(new Date(lastOut.ts)) : "—";
+
+  historyEl.innerHTML = "";
+  if(!ev.length){
+    historyEl.innerHTML = '<div class="empty">Aucun pointage enregistré aujourd’hui.</div>';
+  } else {
+    ev.forEach(e => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = `<span>${e.type === "in" ? "Arrivée" : "Départ"}</span>
+                       <span class="tag ${e.type === "in" ? "in" : ""}">${formatTime(new Date(e.ts))}</span>`;
+      historyEl.appendChild(row);
+    });
+  }
+  updateElapsed();
+}
+
+function updateElapsed(){
+  const ev = getTodayEvents();
+  let total = 0;
+  let start = null;
+  ev.forEach(e => {
+    if(e.type === "in") start = new Date(e.ts);
+    if(e.type === "out" && start){
+      total += new Date(e.ts) - start;
+      start = null;
+    }
+  });
+  if(start) total += new Date() - start;
+  const mins = Math.floor(total/60000);
+  elapsedEl.textContent = `${pad(Math.floor(mins/60))}h${pad(mins%60)}`;
+}
+
+btn.addEventListener("click", () => {
+  state.events.push({type:isIn() ? "out" : "in", ts:new Date().toISOString()});
+  save();
+});
+
+render();
+</script>
+</body>
+</html>
