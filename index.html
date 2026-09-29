@@ -46,6 +46,19 @@ h1{font-size:26px;line-height:1.15;margin:5px 0 4px}
 }
 .btn:hover{transform:translateY(-1px);filter:brightness(.98)}
 .btn.out{background:var(--navy);color:white}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.reset-btn{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px 14px;
+  font-size:13px;
+  font-weight:800;
+  cursor:pointer;
+  background:#fff;
+  color:var(--navy);
+  transition:.15s ease;
+}
+.reset-btn:hover{transform:translateY(-1px);background:#fafafa}
 .hint{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.4}
 .summary{
   display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px
@@ -89,7 +102,10 @@ h1{font-size:26px;line-height:1.15;margin:5px 0 4px}
       </div>
 
       <div class="actionbox">
-        <button id="punchBtn" class="btn">Pointer mon arrivée</button>
+        <div class="actions">
+          <button id="punchBtn" class="btn">Pointer mon arrivée</button>
+          <button id="resetBtn" class="reset-btn" type="button">Réinitialiser</button>
+        </div>
         <div id="hint" class="hint">Votre pointage sera enregistré localement pour cette démonstration.</div>
       </div>
     </div>
@@ -117,6 +133,7 @@ const timeEl = document.getElementById("time");
 const dateEl = document.getElementById("date");
 const statusEl = document.getElementById("status");
 const btn = document.getElementById("punchBtn");
+const resetBtn = document.getElementById("resetBtn");
 const arrivalEl = document.getElementById("arrival");
 const departureEl = document.getElementById("departure");
 const elapsedEl = document.getElementById("elapsed");
@@ -196,6 +213,12 @@ function updateElapsed(){
 btn.addEventListener("click", () => {
   state.events.push({type:isIn() ? "out" : "in", ts:new Date().toISOString()});
   save();
+});
+
+resetBtn.addEventListener("click", () => {
+  state.events = [];
+  localStorage.removeItem(KEY);
+  render();
 });
 
 render();
